@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Streak">
+<title>Streak Keeper</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🔥%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#000;--card:#121214;--line:#26262b;--text:#f5f5f7;--dim:#8c8c96;--pink:#FE2C55;--cyan:#25F4EE;--ok:#3ddc84;--warn:#ffc43d;--bad:#ff3b5c;--gray:#5a5a63}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main{max-width:520px;margin:0 auto;padding:16px 16px 90px}
+h1{font-size:22px;margin:4px 0 14px;display:flex;justify-content:space-between;align-items:center}
+h1 button{font-size:22px;background:none;border:0;color:var(--text);padding:6px}
+button{font:inherit;color:inherit;cursor:pointer}
+.sum{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+.sum b{font-size:30px;display:block;line-height:1.1}
+.sum span{color:var(--dim);font-size:14px}
+.cta{width:100%;min-height:58px;border:0;border-radius:14px;background:var(--pink);color:#fff;font-weight:700;font-size:18px;margin-bottom:16px}
+.cta:disabled{background:var(--line);color:var(--dim)}
+.f{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--gray);border-radius:14px;padding:12px;margin-bottom:10px}
+.f.ok{border-left-color:var(--ok)}.f.warn{border-left-color:var(--warn)}.f.bad{border-left-color:var(--bad);animation:pulse 1.4s infinite}.f.dead{opacity:.6}
+@keyframes pulse{50%{background:#2a0e15}}
+@media (prefers-reduced-motion:reduce){.f.bad{animation:none}}
+.f .i{flex:1;min-width:0}
+.f .n{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f .t{font-size:14px;color:var(--dim)}
+.f.ok .t b{color:var(--ok)}.f.warn .t b{color:var(--warn)}.f.bad .t b{color:var(--bad)}
+.ic{background:none;border:1px solid var(--line);border-radius:12px;min-width:46px;min-height:46px;font-size:18px}
+.empty{color:var(--dim);text-align:center;padding:30px 10px}
+.add{position:fixed;right:max(16px,calc(50% - 244px));bottom:calc(20px + env(safe-area-inset-bottom));width:60px;height:60px;border-radius:50%;border:0;background:var(--cyan);color:#000;font-size:32px;font-weight:700}
+.ov{position:fixed;inset:0;background:var(--bg);overflow:auto;padding:calc(16px + env(safe-area-inset-top)) 16px 30px;display:none;z-index:5}
+.ov.on{display:block}.ov>div{max-width:520px;margin:0 auto}
+label{display:block;margin:14px 0 6px;color:var(--dim);font-size:14px}
+input[type=text],input[type=number],input[type=time],textarea{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit}
+input:focus-visible,button:focus-visible,textarea:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.row{display:flex;gap:10px;margin-top:12px}.row>*{flex:1}
+.btn{min-height:52px;border-radius:14px;border:1px solid var(--line);background:var(--card);font-weight:600;padding:0 14px}
+.btn.p{background:var(--pink);border-color:var(--pink);color:#fff}.btn.c{background:var(--cyan);border-color:var(--cyan);color:#000}
+.q{text-align:center;padding-top:20px}
+.q .big{font-size:84px;line-height:1.1}.q .nick{font-size:28px;font-weight:800;word-break:break-all}
+.bar{height:6px;background:var(--line);border-radius:3px;margin:8px 0 22px;overflow:hidden}.bar i{display:block;height:100%;background:var(--cyan)}
+.note{color:var(--dim);font-size:13px;margin-top:10px}
+#toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:#fff;color:#000;padding:10px 16px;border-radius:12px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<main>
+  <h1>Streak Keeper <button id="bSet" aria-label="Настройки">⚙️</button></h1>
+  <div class="sum" id="sum"></div>
+  <button class="cta" id="bQueue"></button>
+  <div id="list"></div>
+</main>
+<button class="add" id="bAdd" aria-label="Добавить друга">+</button>
+
+<!-- Друг: добавить/изменить -->
+<div class="ov" id="ovF"><div>
+  <h1 id="fTitle">Новый друг</h1>
+  <label for="fNick">Ник в TikTok (без @)</label>
+  <input type="text" id="fNick" autocapitalize="off" autocorrect="off" spellcheck="false">
+  <label for="fStreak">Длина стрика, дней</label>
+  <input type="number" id="fStreak" min="0" value="1">
+  <label for="fLast">Когда последний раз отправлял(а) ❤️</label>
+  <div class="row"><button class="btn" id="fNow">Только что</button><button class="btn" id="fNever">Не помню</button></div>
+  <div class="note" id="fLastTxt"></div>
+  <label style="display:flex;gap:10px;align-items:center;color:var(--text);font-size:16px"><input type="checkbox" id="fFire" checked style="width:22px;height:22px"> 🔥 стрик активен</label>
+  <div class="row"><button class="btn" id="fCancel">Отмена</button><button class="btn p" id="fSave">Сохранить</button></div>
+  <div class="row"><button class="btn" id="fDel" style="color:var(--bad)">Удалить друга</button></div>
+</div></div>
+
+<!-- Очередь -->
+<div class="ov" id="ovQ"><div id="qBody"></div></div>
+
+<!-- Настройки -->
+<div class="ov" id="ovS"><div>
+  <h1>Настройки</h1>
+  <label for="sMsg">Текст сообщения</label>
+  <input type="text" id="sMsg">
+  <label for="sGap">Считать «пора отправлять», если прошло часов</label>
+  <input type="number" id="sGap" min="1" max="23">
+  <label for="sTime">Ежедневное напоминание в календаре</label>
+  <input type="time" id="sTime" value="12:00">
+  <div class="row"><button class="btn c" id="sIcs">Скачать напоминание (.ics)</button></div>
+  <div class="note">Файл .ics добавляет в календарь ежедневное событие со звуковым сигналом. Это самый надёжный способ, потому что работает при закрытом приложении.</div>
+  <div class="row"><button class="btn" id="sNotif">Включить уведомления</button></div>
+  <div class="note">Уведомления приходят, только пока вкладка или приложение открыто. На iPhone сначала добавь сайт на экран «Домой» (Поделиться → На экран «Домой»).</div>
+  <div class="row"><button class="btn" id="sExp">Экспорт данных</button><button class="btn" id="sImp">Импорт данных</button></div>
+  <input type="file" id="sFile" accept="application/json" hidden>
+  <div class="row"><button class="btn p" id="sClose">Готово</button></div>
+</div></div>
+
+<div id="toast" role="status"></div>
+
+<script>
+(()=>{
+const H=3600e3, DAY=24*H;
+const KEY='streakKeeper.v1';
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+S=Object.assign({friends:[],msg:'❤️',gap:12,time:'12:00',notified:{}},S||{});
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Не удалось сохранить данные')}};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,10);
+const cleanNick=s=>s.trim().replace(/^@+/,'').replace(/[^\w.]/g,'');
+
+let tt;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),1800)}
+
+/* ---- логика стриков ---- */
+const left=f=>f.last==null?null:f.last+DAY-Date.now();           // мс до сгорания
+const dead=f=>f.fire&&f.last!=null&&left(f)<=0;
+const due=f=>f.fire&&!dead(f)&&(f.last==null||Date.now()-f.last>=S.gap*H);
+function fmt(ms){const m=Math.max(0,Math.floor(ms/6e4));return Math.floor(m/60)+' ч '+String(m%60).padStart(2,'0')+' мин'}
+function cls(f){if(!f.fire)return'';if(f.last==null)return'warn';const l=left(f);return l<=0?'dead':l<4*H?'bad':l<12*H?'warn':'ok'}
+function status(f){
+  if(!f.fire)return'Без 🔥';
+  if(f.last==null)return'Ещё не отправлял(а) ❤️';
+  const l=left(f);
+  return l<=0?'Стрик сгорел':'До сгорания: <b>'+fmt(l)+'</b>';
+}
+const sorted=()=>[...S.friends].sort((a,b)=>{
+  const k=f=>!f.fire?Infinity:f.last==null?-1:dead(f)?Infinity/2:left(f);
+  return k(a)-k(b)});
+
+/* ---- отрисовка ---- */
+function render(){
+  const act=S.friends.filter(f=>f.fire&&!dead(f));
+  const need=S.friends.filter(due);
+  const soon=act.filter(f=>f.last!=null).map(left).sort((a,b)=>a-b)[0];
+  $('sum').innerHTML='<b>'+need.length+' 🔥 ждут ❤️</b><span>'+(soon!=null?'Ближайшее сгорание через '+fmt(soon):act.length?'Отправь первое ❤️, и пойдёт отсчёт':'Добавь друзей, с которыми у тебя есть 🔥')+'</span>';
+  const q=$('bQueue');q.disabled=!need.length;
+  q.textContent=need.length?'Отправить ❤️ всем с 🔥 ('+need.length+')':'Все огоньки сохранены 🔥';
+  const l=$('list');
+  if(!S.friends.length){l.innerHTML='<div class="empty">Пока никого нет.<br>Нажми + и добавь друга со стриком.</div>';return}
+  l.innerHTML=sorted().map(f=>'<div class="f '+cls(f)+'"><div class="i"><div class="n">'+(f.fire?'🔥 ':'')+esc(f.nick)+' · '+f.streak+' дн.</div><div class="t">'+status(f)+'</div></div><button class="ic" data-e="'+f.id+'" aria-label="Изменить '+esc(f.nick)+'">✏️</button></div>').join('');
+}
+$('list').onclick=e=>{const b=e.target.closest('[data-e]');if(b)openForm(b.dataset.e)};
+
+/* ---- форма друга ---- */
+let editId=null,fLast=null;
+function showLast(){$('fLastTxt').textContent=fLast==null?'Не указано':new Date(fLast).toLocaleString('ru-RU')}
+function openForm(id){
+  editId=id||null;const f=S.friends.find(x=>x.id===id);
+  $('fTitle').textContent=f?'Изменить друга':'Новый друг';
+  $('fNick').value=f?f.nick:'';$('fStreak').value=f?f.streak:1;$('fFire').checked=f?f.fire:true;
+  fLast=f?f.last:null;showLast();$('fDel').style.display=f?'':'none';
+  $('ovF').classList.add('on');$('fNick').focus();
+}
+$('bAdd').onclick=()=>openForm();
+$('fNow').onclick=()=>{fLast=Date.now();showLast()};
+$('fNever').onclick=()=>{fLast=null;showLast()};
+$('fCancel').onclick=()=>$('ovF').classList.remove('on');
+$('fSave').onclick=()=>{
+  const nick=cleanNick($('fNick').value);if(!nick){toast('Введи ник');return}
+  const d={nick,streak:Math.max(0,parseInt($('fStreak').value)||0),fire:$('fFire').checked,last:fLast};
+  if(editId)Object.assign(S.friends.find(x=>x.id===editId),d);else S.friends.push({id:uid(),...d});
+  save();$('ovF').classList.remove('on');render();
+};
+$('fDel').onclick=()=>{if(confirm('Удалить друга?')){S.friends=S.friends.filter(x=>x.id!==editId);save();$('ovF').classList.remove('on');render()}};
+
+/* ---- очередь ---- */
+let Q=[],qi=0,qDone=0,hist=[];
+$('bQueue').onclick=()=>{
+  Q=S.friends.filter(due).sort((a,b)=>(a.last==null?-1:left(a))-(b.last==null?-1:left(b))).map(f=>f.id);
+  qi=0;qDone=0;hist=[];try{navigator.clipboard.writeText(S.msg)}catch(e){}$('ovQ').classList.add('on');step();
+};
+function step(){
+  const b=$('qBody');
+  if(qi>=Q.length){
+    b.innerHTML='<div class="q"><div class="big">🔥</div><h1 style="justify-content:center">Все огоньки сохранены</h1><p class="note">Отправлено ❤️: '+qDone+' из '+Q.length+'</p><div class="row"><button class="btn p" id="qEnd">Закрыть</button></div></div>';
+    $('qEnd').onclick=closeQ;return;
+  }
+  const f=S.friends.find(x=>x.id===Q[qi]);
+  if(!f){qi++;step();return}
+  const t=f.last==null?'Первое ❤️ в этом стрике':dead(f)?'Стрик сгорел':'До сгорания: '+fmt(left(f));
+  b.innerHTML='<div class="q"><div class="note">'+(qi+1)+' из '+Q.length+'</div><div class="bar"><i style="width:'+(qi/Q.length*100)+'%"></i></div>'
+   +'<div class="big">❤️</div><div class="nick">@'+esc(f.nick)+'</div><p class="note">'+t+' · стрик '+f.streak+' дн.</p>'
+   +'<div class="row"><button class="btn p" id="qOpen" style="min-height:64px;font-size:18px">Открыть чат и отметить '+esc(S.msg)+'</button></div>'
+   +'<p class="note">'+esc(S.msg)+' уже в буфере: вставь в чате и отправь. Отметка ставится сама.</p>'
+   +'<div class="row"><button class="btn" id="qBack">Назад</button><button class="btn" id="qSkip">Пропустить</button></div>'
+   +'<div class="row"><button class="btn" id="qEnd2">Закончить</button></div></div>';
+  $('qOpen').onclick=()=>{
+    // всё синхронно, чтобы iOS не заблокировал открытие ссылки
+    window.open('https://www.tiktok.com/@'+encodeURIComponent(f.nick),'_blank');
+    try{navigator.clipboard.writeText(S.msg)}catch(e){}
+    const now=Date.now();
+    hist.push({i:qi,id:f.id,streak:f.streak,last:f.last});
+    if(f.last==null||now-f.last>DAY)f.streak=1;else if(now-f.last>=S.gap*H)f.streak++;
+    f.last=now;S.notified[f.id]=[];save();qDone++;qi++;step();render();
+  };
+  $('qBack').onclick=()=>{
+    const h=hist.length&&hist[hist.length-1].i===qi-1?hist.pop():null;
+    if(h){const g=S.friends.find(x=>x.id===h.id);if(g){g.streak=h.streak;g.last=h.last;save();qDone--}}
+    if(qi>0)qi--;step();render();
+  };
+  $('qSkip').onclick=()=>{qi++;step()};
+  $('qEnd2').onclick=closeQ;
+}
+function closeQ(){$('ovQ').classList.remove('on');render()}
+
+/* ---- настройки ---- */
+$('bSet').onclick=()=>{$('sMsg').value=S.msg;$('sGap').value=S.gap;$('sTime').value=S.time;$('ovS').classList.add('on')};
+$('sClose').onclick=()=>{
+  S.msg=$('sMsg').value.trim()||'❤️';S.gap=Math.min(23,Math.max(1,parseInt($('sGap').value)||12));S.time=$('sTime').value||'12:00';
+  save();$('ovS').classList.remove('on');render();
+};
+function download(name,type,text){
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+$('sIcs').onclick=()=>{
+  const [h,m]=($('sTime').value||'12:00').split(':');
+  const d=new Date();d.setHours(+h,+m,0,0);if(d<new Date())d.setDate(d.getDate()+1);
+  const p=n=>String(n).padStart(2,'0');
+  const dt=`${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}00`;
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//StreakKeeper//RU','BEGIN:VEVENT','UID:streak-'+uid()+'@streakkeeper',
+   'DTSTAMP:'+new Date().toISOString().replace(/[-:]|\.\d+/g,''),'DTSTART:'+dt,'DURATION:PT15M','RRULE:FREQ=DAILY',
+   'SUMMARY:Отправить ❤️ друзьям с 🔥','DESCRIPTION:Открой Streak Keeper и пройди очередь','BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Отправить ❤️ друзьям с 🔥','TRIGGER:PT0S','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
+  download('streak-reminder.ics','text/calendar',ics);toast('Открой файл, чтобы добавить в календарь');
+};
+$('sNotif').onclick=async()=>{
+  if(!('Notification' in window)){toast('Браузер не поддерживает уведомления');return}
+  const r=await Notification.requestPermission();toast(r==='granted'?'Уведомления включены':'Разрешение не выдано');
+};
+$('sExp').onclick=()=>download('streak-keeper-backup.json','application/json',JSON.stringify(S,null,2));
+$('sImp').onclick=()=>$('sFile').click();
+$('sFile').onchange=async e=>{
+  try{
+    const d=JSON.parse(await e.target.files[0].text());
+    if(!Array.isArray(d.friends))throw 0;
+    S=Object.assign(S,d);S.friends=S.friends.map(f=>({id:f.id||uid(),nick:cleanNick(String(f.nick||'')),streak:+f.streak||0,fire:!!f.fire,last:f.last==null?null:+f.last}));
+    save();render();toast('Данные импортированы');
+  }catch(err){toast('Неверный файл')}
+  e.target.value='';
+};
+
+/* ---- уведомления (пока приложение открыто) ---- */
+function check(){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  for(const f of S.friends){
+    if(!f.fire||f.last==null||dead(f))continue;
+    const l=left(f),done=S.notified[f.id]=S.notified[f.id]||[];
+    for(const th of [6*H,2*H,.5*H]){
+      if(l<=th&&!done.includes(th)){
+        done.push(th);save();
+        new Notification('🔥 Скоро сгорит стрик',{body:'@'+f.nick+': осталось '+fmt(l)+'. Отправь '+S.msg});
+        break;
+      }
+    }
+  }
+}
+setInterval(()=>{render();check()},30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){render();check()}});
+render();check();
+})();
+</script>
+</body>
+</html>
